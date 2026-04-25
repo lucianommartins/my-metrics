@@ -1575,10 +1575,14 @@ runs:
             echo "Using an unreleased version ($METRICS_VERSION)"
             METRICS_IMAGE=metrics:$METRICS_VERSION
           fi
-        # Forked action
+        # Forked action: pull upstream prebuilt image
         else
-          echo "Using a forked version"
-          METRICS_IMAGE=metrics:forked-$METRICS_VERSION
+          echo "Using a forked version, pulling upstream prebuilt image"
+          METRICS_IMAGE=ghcr.io/lowlighter/metrics:$METRICS_TAG
+          if ! docker image pull $METRICS_IMAGE; then
+            echo "Failed to fetch upstream image, will rebuild locally"
+            METRICS_IMAGE=metrics:forked-$METRICS_VERSION
+          fi
         fi
         echo "Image name: $METRICS_IMAGE"
 
@@ -1596,7 +1600,7 @@ runs:
         echo "::endgroup::"
 
         # Run docker image with current environment
-        docker run --init --rm --volume $GITHUB_EVENT_PATH:$GITHUB_EVENT_PATH --volume $METRICS_RENDERS:/renders --env-file .env $METRICS_IMAGE
+        docker run --init --rm --volume $GITHUB_EVENT_PATH:$GITHUB_EVENT_PATH --volume $METRICS_RENDERS:/renders --volume $METRICS_ACTION_PATH/source:/metrics/source --env-file .env $METRICS_IMAGE
         rm .env
       shell: bash
       env:
