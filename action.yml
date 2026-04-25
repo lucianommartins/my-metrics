@@ -1578,10 +1578,22 @@ runs:
         # Forked action: pull upstream prebuilt image
         else
           echo "Using a forked version, pulling upstream prebuilt image"
-          METRICS_IMAGE=ghcr.io/lowlighter/metrics:$METRICS_TAG
+          set +e
+          METRICS_IS_RELEASED=$(expr $(expr match $METRICS_VERSION .*-beta) == 0)
+          set -e
+          FORK_TAG=$METRICS_TAG
+          if [[ "$METRICS_IS_RELEASED" -eq "0" ]]; then
+            FORK_TAG="$FORK_TAG-beta"
+          fi
+          METRICS_IMAGE=ghcr.io/lowlighter/metrics:$FORK_TAG
+          echo "Pulling upstream image: $METRICS_IMAGE"
           if ! docker image pull $METRICS_IMAGE; then
-            echo "Failed to fetch upstream image, will rebuild locally"
-            METRICS_IMAGE=metrics:forked-$METRICS_VERSION
+            echo "Failed with tag $FORK_TAG, trying latest release tag"
+            METRICS_IMAGE=ghcr.io/lowlighter/metrics:v3.34
+            if ! docker image pull $METRICS_IMAGE; then
+              echo "Failed to fetch upstream image, will rebuild locally"
+              METRICS_IMAGE=metrics:forked-$METRICS_VERSION
+            fi
           fi
         fi
         echo "Image name: $METRICS_IMAGE"
